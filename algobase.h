@@ -1,0 +1,418 @@
+#ifndef TINYSTL_ALGOBASE_H_
+#define TINYSTL_ALGOBASE_H_
+
+#include <cstring>
+
+#include "iterator.h"
+#include "utils.h"
+
+
+namespace mystl{
+
+#ifdef max
+#pragma message("#undefing marco max")
+#undef max
+#endif // max
+
+#ifdef min
+#pragma message("#undefing marco min")
+#undef min
+#endif // min
+
+
+//max
+template<class T>
+const T& max(const T& lhs,const T& rhs){
+    return lhs>rhs ? lhs : rhs;
+}
+
+//使用comp函数代替比较运算符
+template<class T,class Compare>
+const T& max(const T& lhs,const T& rhs ,Compare comp){
+    return comp(lhs,rhs) ? lhs : rhs;
+}
+
+//min
+
+template<class T>
+const T& min(const T& lhs,const T& rhs){
+    return lhs<rhs ? lhs : rhs;
+}
+
+//使用comp函数代替比较运算符
+template<class T,class Compare>
+const T& min(const T& lhs,const T& rhs ,Compare comp){
+    return comp(lhs,rhs) ? lhs : rhs;
+}
+//交换两个迭代器所指的对象
+template<class Iter1,class Iter2>
+void iter_swap(Iter1 lhs,Iter2 rhs){
+    //因为交换的所指的对象,所以需要解引用
+    mystl::swap(*lhs,*rhs);
+}
+
+//copy函数
+//input_iterator特化
+template<class InputIter,class OutputIter>
+OutputIter uncheck_copy_cat(InputIter first,InputIter last,
+                            OutputIter result,mystl::input_iterator_tag)
+{
+    for(;first!=last;first++,result++){
+        *result=*first;
+    }
+    return result;
+}
+//random特化
+template<class RandomAccessIter,class OutPutIter>
+OutPutIter uncheck_copy_cat(RandomAccessIter first,RandomAccessIter last,
+                            OutPutIter result,mystl::random_access_iterator_tag)
+{
+    for (auto n = last - first; n > 0; --n, ++first, ++result)
+    {
+        *result = *first;
+    }
+    return result;
+}
+
+//上层封装
+template<class InputIter,class OutputIter>
+OutputIter uncheck_copy(InputIter first,InputIter last,OutputIter resulr){
+    return uncheck_copy_cat(first,last,iterator_category(first));
+}
+
+//trivially_copy_assignable 类型提供特化版本
+//检查input去掉顶层const之后是否与output一致
+//检查output是否是平凡复制可赋值的类型
+//如果都满足的话,就进行memove拷贝操作,速度快,且是字节级的拷贝,对拷贝数据的类型无要求
+template<class input,class output>
+typename std::enable_if<std::is_same<typename std::remove_const<input>::type,output>::value&&
+std::is_trivially_copy_assignable<output>::value, output*>::type
+uncheck_copy(input* first,output* last){
+    const auto n = static_cast<size_t>(last - first);
+  if (n != 0)
+    std::memmove(result, first, n * sizeof(Up));
+  return result + n;
+}
+
+//再封装一层,这个才是实际直接调用的函数
+template <class InputIter, class OutputIter>
+OutputIter copy(InputIter first, InputIter last, OutputIter result)
+{
+  return unchecked_copy(first, last, result);
+}
+
+//copy_backward,将[first,last),拷贝到[result - (last - first), result),
+//也就是result给的是目标区间的末尾
+//只支持双向迭代器和随机访问迭代器
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2 
+unchecked_copy_backward_cat(BidirectionalIter1 first, BidirectionalIter1 last,
+                            BidirectionalIter2 result, mystl::bidirectional_iterator_tag)
+{
+  while (first != last)
+    *(--result) = *(--last);
+  return result;
+}
+
+//random_access_iterator版本,输出的接收迭代器可以是双向迭代器,但是输入的迭代器,必须是random_access_iterator
+template<class RandomAccessIter,class BidirectionalIter>
+BidirectionalIter unchecked_copy_backward_cat(RandomAccessIter first,RandomAccessIter last,
+                                            BidirectionalIter result,mystl::random_access_iterator_tag)
+{
+    for(auto n=first-last;n>0;--n){
+        *(--result)=*(--last);
+    }
+    return result;
+}
+
+//上层封装,当输入为BidirectionalIter1,BidirectionalIter2时,使用第一个模板
+//当输入为RandomAccessIter,BidirectionalIter时,使用random_access_iterator版本
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2 
+unchecked_copy_backward(BidirectionalIter1 first, BidirectionalIter1 last,
+                        BidirectionalIter2 result)
+{
+  return unchecked_copy_backward_cat(first, last, result,
+                                     iterator_category(first));
+}
+
+
+//与正常拷贝一致
+template <class Tp, class Up>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<Tp>::type, Up>::value &&
+  std::is_trivially_copy_assignable<Up>::value,
+  Up*>::type
+unchecked_copy_backward(Tp* first, Tp* last, Up* result)
+{
+  const auto n = static_cast<size_t>(last - first);
+  if (n != 0)
+  {
+    result -= n;
+    std::memmove(result, first, n * sizeof(Up));
+  }
+  return result;
+}
+
+
+//顶层封装,后方拷贝,只支持输入bidirectional和random_access_iterator两种迭代器
+//因为需要向前推进
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2 
+copy_backward(BidirectionalIter1 first, BidirectionalIter1 last, BidirectionalIter2 result)
+{
+  return unchecked_copy_backward(first, last, result);
+}
+
+
+//copy_if,使用一元谓词来对是否拷贝元素进行判断
+template<class InputIter,class OutputIter,class UnaryPredicate>
+OutputIter copy_if(InputIter first,InputIter last,OutputIter result,UnaryPredicate unary_pre){
+    for(;first!=last;first++){
+        if(unary_pre(*first)){
+            *(result++)=*first;
+        }
+    }
+    return result;
+}
+
+//copy_n把 [first, first + n)区间上的元素拷贝到 [result, result + n)上
+// 返回一个 pair 分别指向拷贝结束的尾部
+//基础版
+template <class InputIter, class Size, class OutputIter>
+mystl::pair<InputIter, OutputIter>
+unchecked_copy_n(InputIter first, Size n, OutputIter result, mystl::input_iterator_tag)
+{
+  for (; n > 0; --n, ++first, ++result)
+  {
+    *result = *first;
+  }
+  return mystl::pair<InputIter, OutputIter>(first, result);
+
+}
+
+//random偏特化版
+
+template <class RandomIter, class Size, class OutputIter>
+mystl::pair<RandomIter, OutputIter>
+unchecked_copy_n(RandomIter first, Size n, OutputIter result, 
+                 mystl::random_access_iterator_tag)
+{
+  auto last = first + n;
+  //调用copy
+  return mystl::pair<RandomIter, OutputIter>(last, mystl::copy(first, last, result));
+}
+
+//上层封装,实际暴露出去的接口
+template <class InputIter, class Size, class OutputIter>
+mystl::pair<InputIter, OutputIter> 
+copy_n(InputIter first, Size n, OutputIter result)
+{
+  return unchecked_copy_n(first, n, result, iterator_category(first));
+}
+
+//move
+//把 [first, last)区间内的元素移动到 [result, result + (last - first))内
+//基础版input_iterator
+template <class InputIter, class OutputIter>
+OutputIter 
+unchecked_move_cat(InputIter first, InputIter last, OutputIter result,
+                   mystl::input_iterator_tag)
+{
+  for (; first != last; ++first, ++result)
+  {
+    *result = mystl::move(*first);
+  }
+  return result;
+}
+
+//random版本
+template <class RandomIter, class OutputIter>
+OutputIter 
+unchecked_move_cat(RandomIter first, RandomIter last, OutputIter result,
+                   mystl::random_access_iterator_tag)
+{
+  for (auto n = last - first; n > 0; --n, ++first, ++result)
+  {
+    *result = mystl::move(*first);
+  }
+  return result;
+}
+
+//封装一层
+template <class InputIter, class OutputIter>
+OutputIter 
+unchecked_move(InputIter first, InputIter last, OutputIter result)
+{
+  return unchecked_move_cat(first, last, result, iterator_category(first));
+}
+
+//trivially_copy_assignable 类型提供特化版本
+template <class Tp, class Up>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<Tp>::type, Up>::value &&
+  std::is_trivially_move_assignable<Up>::value,
+  Up*>::type
+unchecked_move(Tp* first, Tp* last, Up* result)
+{
+  const size_t n = static_cast<size_t>(last - first);
+  if (n != 0)
+    std::memmove(result, first, n * sizeof(Up));
+  return result + n;
+}
+
+//顶层封装
+template <class InputIter, class OutputIter>
+OutputIter move(InputIter first, InputIter last, OutputIter result)
+{
+  return unchecked_move(first, last, result);
+}
+
+
+
+//后move_backward_cat,基础版
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2
+unchecked_move_backward_cat(BidirectionalIter1 first, BidirectionalIter1 last,
+                            BidirectionalIter2 result, mystl::bidirectional_iterator_tag)
+{
+  while (first != last)
+    *--result = mystl::move(*--last);
+  return result;
+}
+
+// random_access_iterator_tag 版本
+template <class RandomIter1, class RandomIter2>
+RandomIter2
+unchecked_move_backward_cat(RandomIter1 first, RandomIter1 last,
+                            RandomIter2 result, mystl::random_access_iterator_tag)
+{
+  for (auto n = last - first; n > 0; --n)
+    *--result = mystl::move(*--last);
+  return result;
+}
+
+//封装一次
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2
+unchecked_move_backward(BidirectionalIter1 first, BidirectionalIter1 last, 
+                        BidirectionalIter2 result)
+{
+  return unchecked_move_backward_cat(first, last, result,
+                                     iterator_category(first));
+}
+
+// 为 trivially_copy_assignable 类型提供特化版本
+template <class Tp, class Up>
+typename std::enable_if<
+  std::is_same<typename std::remove_const<Tp>::type, Up>::value &&
+  std::is_trivially_move_assignable<Up>::value,
+  Up*>::type
+unchecked_move_backward(Tp* first, Tp* last, Up* result)
+{
+  const size_t n = static_cast<size_t>(last - first);
+  if (n != 0)
+  {
+    result -= n;
+    std::memmove(result, first, n * sizeof(Up));
+  }
+  return result;
+}
+
+template <class BidirectionalIter1, class BidirectionalIter2>
+BidirectionalIter2
+move_backward(BidirectionalIter1 first, BidirectionalIter1 last, BidirectionalIter2 result)
+{
+  return unchecked_move_backward(first, last, result);
+}
+
+//equal
+template<class InputIter1,class InputIter2>
+bool equal(InputIter1 first1, InputIter1 last,InputIter2){
+    for(;first1!=last;first1++,first2++){
+        if(*first1 != *first2){
+            return false;
+        }
+    }
+    return true;
+}
+
+//谓词重载版
+template<class InputIter1,class InputIter2,class Compared>
+bool equal(InputIter1 first1, InputIter1 last,InputIter2 first2,Compared comp){
+    for(; first1!=last ; first1++,first2++){
+        if(!comp( *first1 , *first2)){
+            return false;
+        }
+    }
+    return true;
+}
+
+//fill_n
+template <class OutputIter, class Size, class T>
+OutputIter unchecked_fill_n(OutputIter first, Size n, const T& value)
+{
+  for (; n > 0; --n, ++first)
+  {
+    *first = value;
+  }
+  return first;
+}
+
+
+// 为 one-byte 类型提供特化版本,字节填充
+template <class Tp, class Size, class Up>
+typename std::enable_if<
+  std::is_integral<Tp>::value && sizeof(Tp) == 1 &&
+  !std::is_same<Tp, bool>::value &&
+  std::is_integral<Up>::value && sizeof(Up) == 1,
+  Tp*>::type
+unchecked_fill_n(Tp* first, Size n, Up value)
+{
+  if (n > 0)
+  {
+    std::memset(first, (unsigned char)value, (size_t)(n));
+  }
+  return first + n;
+}
+
+//顶层封装
+
+template <class OutputIter, class Size, class T>
+OutputIter fill_n(OutputIter first, Size n, const T& value)
+{
+  return unchecked_fill_n(first, n, value);
+}
+
+
+//fill
+//前向迭代器版本
+template <class ForwardIter, class T>
+void fill_cat(ForwardIter first, ForwardIter last, const T& value,
+              mystl::forward_iterator_tag)
+{
+  for (; first != last; ++first)
+  {
+    *first = value;
+  }
+}
+//随机访问迭代器版本特化
+template <class RandomIter, class T>
+void fill_cat(RandomIter first, RandomIter last, const T& value,
+              mystl::random_access_iterator_tag)
+{
+  fill_n(first, last - first, value);
+}
+//顶层封装
+template <class ForwardIter, class T>
+void fill(ForwardIter first, ForwardIter last, const T& value)
+{
+  fill_cat(first, last, value, iterator_category(first));
+}
+
+
+
+}
+
+
+#endif
