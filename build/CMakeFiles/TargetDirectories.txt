@@ -1,0 +1,5 @@
+/home/gray/TinySTL/TinySTL/build/CMakeFiles/rebuild_cache.dir
+/home/gray/TinySTL/TinySTL/build/CMakeFiles/edit_cache.dir
+/home/gray/TinySTL/TinySTL/build/Test/CMakeFiles/edit_cache.dir
+/home/gray/TinySTL/TinySTL/build/Test/CMakeFiles/rebuild_cache.dir
+/home/gray/TinySTL/TinySTL/build/Test/CMakeFiles/stltest.dir

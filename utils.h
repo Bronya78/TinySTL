@@ -85,9 +85,9 @@ struct pair
     typename std::enable_if<
     std::is_copy_constructible<U1>::value &&
     std::is_copy_constructible<U2>::value &&
-    std::is_convertible<const U1&, T>::value &&
-    std::is_convertible<const U2&, T>::value, int>::type = 0>
-    constexpr pair(const T& a, const T& b): first(a), second(b)
+    std::is_convertible<const U1&, T1>::value &&
+    std::is_convertible<const U2&, T2>::value, int>::type = 0>
+    constexpr pair(const T1& a, const T2& b): first(a), second(b)
     {}
 
 
@@ -113,7 +113,7 @@ struct pair
     std::is_convertible<Other2&&,T2>::value , int>::type=0>
     constexpr pair(Other1 &&a,Other2 &&b)
     :first(mystl::forward<Other1>(a)),
-          mystl::forward<Other1>(b)
+          second(mystl::forward<Other2>(b))
     {}
 
 
@@ -130,7 +130,7 @@ struct pair
     , int>::type=0>
     explicit constexpr pair(Other1 &&a,Other2 &&b)
     :first(mystl::forward<Other1>(a)),
-          mystl::forward<Other1>(b)
+          second(mystl::forward<Other2>(b))
     {}
 
 

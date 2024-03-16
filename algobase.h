@@ -87,10 +87,10 @@ OutputIter uncheck_copy(InputIter first,InputIter last,OutputIter resulr){
 template<class input,class output>
 typename std::enable_if<std::is_same<typename std::remove_const<input>::type,output>::value&&
 std::is_trivially_copy_assignable<output>::value, output*>::type
-uncheck_copy(input* first,output* last){
+uncheck_copy(input* first,input* last,output* result){
     const auto n = static_cast<size_t>(last - first);
   if (n != 0)
-    std::memmove(result, first, n * sizeof(Up));
+    std::memmove(result, first, n * sizeof(output));
   return result + n;
 }
 
@@ -328,7 +328,7 @@ move_backward(BidirectionalIter1 first, BidirectionalIter1 last, BidirectionalIt
 
 //equal
 template<class InputIter1,class InputIter2>
-bool equal(InputIter1 first1, InputIter1 last,InputIter2){
+bool equal(InputIter1 first1, InputIter1 last,InputIter2 first2){
     for(;first1!=last;first1++,first2++){
         if(*first1 != *first2){
             return false;

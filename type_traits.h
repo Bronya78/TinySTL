@@ -5,16 +5,15 @@
 namespace mystl{
 
 
-template<class T,T v>
-struct m__integral_constant
+template <class T, T v>
+struct m_integral_constant
 {
-    //封装编译时常量的创建细节
-    static constexpr T value = v;
+  static constexpr T value = v;
 };
 
 template <bool b>
 using m_bool_constant = m_integral_constant<bool, b>;
-//方便直接使用true和false两个编译时常量
+
 typedef m_bool_constant<true>  m_true_type;
 typedef m_bool_constant<false> m_false_type;
 
