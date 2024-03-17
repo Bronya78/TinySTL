@@ -65,7 +65,7 @@ public:
     mystl::is_input_iterator<Iter>::value, int>::type = 0>
   vector(Iter first, Iter last)
   {
-    MYSTL_DEBUG(!(last < first));
+    MYSTL_DEBUG(!(last < first));//first严格小于last
     range_init(first, last);
   }
 
