@@ -3,7 +3,7 @@
 
 // 这个头文件包含了一个模板类 stack
 // stack : 栈
-
+//适配器，不算容器
 #include "deque.h"    
 
 namespace mystl
